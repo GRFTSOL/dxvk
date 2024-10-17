@@ -109,13 +109,6 @@ namespace dxvk {
     void*           mapPtr = nullptr;
   };
 
-  struct D3D9StagingBufferMarkerPayload {
-    uint64_t        sequenceNumber;
-    VkDeviceSize    allocated;
-  };
-
-  using D3D9StagingBufferMarker = DxvkMarker<D3D9StagingBufferMarkerPayload>;
-
   class D3D9DeviceEx final : public ComObjectClamp<IDirect3DDevice9Ex> {
     constexpr static uint32_t DefaultFrameLatency = 3;
     constexpr static uint32_t MaxFrameLatency     = 20;
@@ -796,12 +789,10 @@ namespace dxvk {
 
     void EndFrame();
 
-    void UpdateBoundRTs(uint32_t index);
-
     void UpdateActiveRTs(uint32_t index);
 
     template <uint32_t Index>
-    void UpdateAnyColorWrites(bool has);
+    void UpdateAnyColorWrites();
 
     void UpdateActiveTextures(uint32_t index, DWORD combinedUsage);
 
@@ -1095,8 +1086,6 @@ namespace dxvk {
 
     D3D9BufferSlice AllocStagingBuffer(VkDeviceSize size);
 
-    void EmitStagingBufferMarker();
-
     void WaitStagingBuffer();
 
     bool ShouldRecord();
@@ -1299,6 +1288,31 @@ namespace dxvk {
       m_mostRecentlyUsedSwapchain = m_implicitSwapchain.ptr();
     }
 
+    bool IsTextureBoundAsAttachment(const D3D9CommonTexture* pTexture) const {
+      if (unlikely(pTexture->IsRenderTarget())) {
+        for (uint32_t i = 0u; i < m_state.renderTargets.size(); i++) {
+          if (m_state.renderTargets[i] == nullptr)
+            continue;
+
+          auto texInfo = m_state.renderTargets[i]->GetCommonTexture();
+          if (unlikely(texInfo == pTexture)) {
+            return true;
+          }
+        }
+      } else if (unlikely(pTexture->IsDepthStencil() && m_state.depthStencil != nullptr)) {
+        auto texInfo = m_state.depthStencil->GetCommonTexture();
+        if (unlikely(texInfo == pTexture)) {
+          return true;
+        }
+      }
+      return false;
+    }
+
+    inline bool HasRenderTargetBound(uint32_t Index) const {
+      return m_state.renderTargets[Index] != nullptr
+        && !m_state.renderTargets[Index]->IsNull();
+    }
+
     Com<D3D9InterfaceEx>            m_parent;
     D3DDEVTYPE                      m_deviceType;
     HWND                            m_window;
@@ -1339,10 +1353,8 @@ namespace dxvk {
     void*                           m_upBufferMapPtr  = nullptr;
 
     DxvkStagingBuffer               m_stagingBuffer;
-    VkDeviceSize                    m_stagingBufferAllocated      = 0ull;
-    VkDeviceSize                    m_stagingBufferLastAllocated  = 0ull;
-    VkDeviceSize                    m_stagingBufferLastSignaled   = 0ull;
-    std::queue<Rc<D3D9StagingBufferMarker>> m_stagingBufferMarkers;
+    Rc<sync::Fence>                 m_stagingBufferFence;
+    VkDeviceSize                    m_stagingMemorySignaled = 0ull;
 
     D3D9Cursor                      m_cursor;
 
@@ -1375,8 +1387,6 @@ namespace dxvk {
     uint32_t                        m_dirtySamplerStates = 0;
     uint32_t                        m_dirtyTextures      = 0;
 
-    uint32_t                        m_boundRTs        : 4;
-    uint32_t                        m_anyColorWrites  : 4;
     uint32_t                        m_activeRTsWhichAreTextures : 4;
     uint32_t                        m_alphaSwizzleRTs : 4;
     uint32_t                        m_lastHazardsRT   : 4;

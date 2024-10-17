@@ -138,16 +138,22 @@ namespace dxvk {
   }
 
 
-  Rc<DxvkGpuEvent> DxvkDevice::createGpuEvent() {
-    return new DxvkGpuEvent(m_vkd);
+  Rc<DxvkEvent> DxvkDevice::createGpuEvent() {
+    return new DxvkEvent(this);
   }
 
 
-  Rc<DxvkGpuQuery> DxvkDevice::createGpuQuery(
+  Rc<DxvkQuery> DxvkDevice::createGpuQuery(
           VkQueryType           type,
           VkQueryControlFlags   flags,
           uint32_t              index) {
-    return new DxvkGpuQuery(m_vkd, type, flags, index);
+    return new DxvkQuery(this, type, flags, index);
+  }
+
+
+  Rc<DxvkGpuQuery> DxvkDevice::createRawQuery(
+          VkQueryType           type) {
+    return m_objects.queryPool().allocQuery(type);
   }
 
 

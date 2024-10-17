@@ -2,6 +2,8 @@
 
 #include <vector>
 
+#include "dxvk_gpu_event.h"
+#include "dxvk_gpu_query.h"
 #include "dxvk_resource.h"
 #include "dxvk_sampler.h"
 
@@ -116,6 +118,22 @@ namespace dxvk {
     }
 
     /**
+     * \brief Adds an event to track
+     * \param [in] res The event to track
+     */
+    void trackEvent(Rc<DxvkGpuEvent>&& event) {
+      m_events.push_back(std::move(event));
+    }
+
+    /**
+     * \brief Adds a query to track
+     * \param [in] query The query to track
+     */
+    void trackQuery(Rc<DxvkGpuQuery>&& query) {
+      m_queries.push_back(std::move(query));
+    }
+
+    /**
      * \brief Adds a resource to track
      * \param [in] res The resource to track
      */
@@ -142,6 +160,8 @@ namespace dxvk {
   private:
 
     std::vector<Rc<DxvkSampler>> m_samplers;
+    std::vector<Rc<DxvkGpuEvent>> m_events;
+    std::vector<Rc<DxvkGpuQuery>> m_queries;
 
     std::vector<DxvkLifetime<DxvkResource>> m_resources;
     std::vector<DxvkLifetime<DxvkResourceAllocation>> m_allocations;

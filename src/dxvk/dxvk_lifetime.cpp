@@ -10,6 +10,8 @@ namespace dxvk {
     m_resources.clear();
     m_allocations.clear();
     m_samplers.clear();
+    m_events.clear();
+    m_queries.clear();
   }
   
 }

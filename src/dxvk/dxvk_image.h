@@ -566,6 +566,15 @@ namespace dxvk {
     }
 
     /**
+     * \brief Retrieves resource ID for barrier tracking
+     * \returns Unique resource ID
+     */
+    uint64_t getResourceId() const {
+      constexpr static size_t Align = alignof(DxvkResourceAllocation);
+      return reinterpret_cast<uintptr_t>(m_storage.ptr()) / (Align & -Align);
+    }
+
+    /**
      * \brief Creates or retrieves an image view
      *
      * \param [in] info Image view create info
@@ -573,6 +582,25 @@ namespace dxvk {
      */
     Rc<DxvkImageView> createView(
       const DxvkImageViewKey& info);
+
+    /**
+     * \brief Tracks subresource initialization
+     *
+     * Initialization happens when transitioning the image
+     * away from \c PREINITIALIZED or \c UNDEFINED layouts.
+     * \param [in] subresources Subresource range
+     */
+    void trackInitialization(
+      const VkImageSubresourceRange& subresources);
+
+    /**
+     * \brief Checks whether subresources are initialized
+     *
+     * \param [in] subresources Subresource range
+     * \returns \c true if the subresources are initialized
+     */
+    bool isInitialized(
+      const VkImageSubresourceRange& subresources) const;
 
   private:
 
@@ -592,6 +620,8 @@ namespace dxvk {
     Rc<DxvkResourceAllocation>  m_storage     = nullptr;
 
     small_vector<VkFormat, 4>   m_viewFormats;
+    small_vector<uint16_t, 8>   m_uninitializedMipsPerLayer = { };
+    uint32_t                    m_uninitializedSubresourceCount = 0u;
 
     dxvk::mutex                 m_viewMutex;
     std::unordered_map<DxvkImageViewKey,

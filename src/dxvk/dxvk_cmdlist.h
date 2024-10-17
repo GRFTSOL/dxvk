@@ -284,28 +284,14 @@ namespace dxvk {
       m_resources.trackSampler(sampler);
     }
 
-    /**
-     * \brief Tracks a GPU event
-     * 
-     * The event will be returned to its event pool
-     * after the command buffer has finished executing.
-     * \param [in] handle Event handle
-     */
-    void trackGpuEvent(DxvkGpuEventHandle handle) {
-      m_gpuEventTracker.trackEvent(handle);
+    void trackEvent(Rc<DxvkGpuEvent>&& event) {
+      m_resources.trackEvent(std::move(event));
     }
-    
-    /**
-     * \brief Tracks a GPU query
-     * 
-     * The query handle will be returned to its allocator
-     * after the command buffer has finished executing.
-     * \param [in] handle Event handle
-     */
-    void trackGpuQuery(DxvkGpuQueryHandle handle) {
-      m_gpuQueryTracker.trackQuery(handle);
+
+    void trackQuery(Rc<DxvkGpuQuery>&& query) {
+      m_resources.trackQuery(std::move(query));
     }
-    
+
     /**
      * \brief Tracks a graphics pipeline
      * \param [in] pipeline Pipeline
@@ -1082,8 +1068,6 @@ namespace dxvk {
 
     DxvkLifetimeTracker       m_resources;
     DxvkSignalTracker         m_signalTracker;
-    DxvkGpuEventTracker       m_gpuEventTracker;
-    DxvkGpuQueryTracker       m_gpuQueryTracker;
     DxvkStatCounters          m_statCounters;
 
     DxvkCommandSubmission     m_commandSubmission;
